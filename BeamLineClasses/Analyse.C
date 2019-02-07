@@ -360,6 +360,149 @@ void printSpills(std::map<std::pair<unsigned long long,unsigned long long>, Spil
 }
 
 
+std::string getPID(double const &tof, bool const &XBH4XTDC022713_On, bool const &XBH4XTDC022716_On, bool const &C2IsHighPressure, 
+                   double const &refMomentum)
+{
+  std::string PID = "nopid";
+
+  bool statusCL = 0; bool statusCH = 0;
+  if(C2IsHighPressure){
+    statusCL = XBH4XTDC022713_On;
+    statusCH = XBH4XTDC022716_On;
+  }
+  else{    
+    statusCH = XBH4XTDC022713_On;
+    statusCL = XBH4XTDC022716_On;
+  }
+
+  if(refMomentum==1){
+    if     (tof < 105 && statusCH) {PID =     "e";}
+    else if(tof < 110 && !statusCH){PID = "mu/pi";}
+    else if(tof > 110 && tof < 160 && !statusCH){PID = "P";}
+  }
+  else if(refMomentum==2){
+    if     (tof < 105 && statusCH) {PID = "e";}
+    else if(tof < 103 && !statusCH){PID = "mu/pi";}
+    else if(tof > 103 && tof < 160 && !statusCH){PID = "P";}
+  }
+  else if(refMomentum==3){
+    if     (statusCL==true  && statusCH==true) {PID = "e";    }
+    else if(statusCL==false && statusCH==true) {PID = "mu/pi";}
+    else if(statusCL==false && statusCH==false){PID = "K/P";  }
+  }
+  else if(refMomentum==6 || refMomentum==7){
+    if     (statusCL==true  && statusCH==true) {PID = "e/mu/pi";}
+    else if(statusCL==false && statusCH==true) {PID = "K";      }
+    else if(statusCL==false && statusCH==false){PID = "P";      }
+  }
+
+  return PID;
+}
+
+
+void assignValidTOFAndPID(double &validTOF, std::string &validChannel, std::string &PID, 
+                          std::vector<double> const &tof, std::vector<std::string> const &tofChannel,
+                          std::vector<unsigned long long> const &XBH4_XTDC_022_713_TimestampNS, 
+                          std::vector<unsigned long long> const &XBH4_XTDC_022_716_TimestampNS, 
+                          double const &refMomentum, bool const C2IsHighPressure)
+{
+  validTOF     = -99.;
+  validChannel = "nouniquietof";
+  PID          = "nopid";
+
+  std::vector<double> vAA;
+  std::vector<double> vAB;
+  std::vector<double> vBA;
+  std::vector<double> vBB;
+
+  for(unsigned int i = 0; i < tof.size(); i++)
+  {
+    if     (tofChannel.at(i)=="AA"){vAA.push_back(tof.at(i));}
+    else if(tofChannel.at(i)=="AB"){vAB.push_back(tof.at(i));}
+    else if(tofChannel.at(i)=="BA"){vBA.push_back(tof.at(i));}
+    else if(tofChannel.at(i)=="BB"){vBB.push_back(tof.at(i));}
+  }
+
+  if(vAA.size()+vAB.size()+vBA.size()+vBB.size()>0)
+  {
+    int statusCL = 0; int statusCH = 0;
+    if(C2IsHighPressure){
+      if(XBH4_XTDC_022_713_TimestampNS.size()>0) statusCL=1;
+      if(XBH4_XTDC_022_716_TimestampNS.size()>0) statusCH=1;
+    }
+    else{
+      if(XBH4_XTDC_022_713_TimestampNS.size()>0) statusCH=1;
+      if(XBH4_XTDC_022_716_TimestampNS.size()>0) statusCL=1;
+    }
+    double mini = 1e15;
+    double maxi = 0;
+    std::string validChannel_Mini = "";
+    std::string validChannel_Maxi = "";
+    for(int i=0; i < vAA.size(); i++){
+      if(mini > vAA[i]){
+        mini = vAA[i];
+        validChannel_Mini = "AA";
+      }
+      if(maxi < vAA[i]){
+        maxi = vAA[i];
+        validChannel_Maxi = "AA";
+      }
+    }
+    for(int i=0; i < vAB.size(); i++){
+      if(mini > vAB[i]){
+        mini = vAB[i];
+        validChannel_Mini = "AB";
+      }
+      if(maxi < vAB[i]){
+        maxi = vAB[i];
+        validChannel_Maxi = "AB";
+      }
+    }
+    for(int i=0; i < vBA.size(); i++){
+      if(mini > vBA[i]){
+        mini = vBA[i];
+        validChannel_Mini = "BA";
+      }
+      if(maxi < vBA[i]){
+        maxi = vBA[i];
+        validChannel_Maxi = "BA";
+      }
+    }
+    for(int i=0; i < vBB.size(); i++){
+      if(mini > vBB[i]){
+        mini = vBB[i];
+        validChannel_Mini = "BB";
+      }
+      if(maxi < vBB[i]){
+        maxi = vBB[i];
+        validChannel_Maxi = "BB";
+      }
+    }
+
+    if(refMomentum==1 || refMomentum==2){
+      PID = getPID(mini, XBH4_XTDC_022_713_TimestampNS.size() > 0 ? true : false, 
+                         XBH4_XTDC_022_716_TimestampNS.size() > 0 ? true : false, C2IsHighPressure, refMomentum);
+      if     (PID=="e")    {validTOF = mini; validChannel = validChannel_Mini;}
+      else if(PID=="mu/pi"){validTOF = mini; validChannel = validChannel_Mini;}
+      else if(getPID(maxi, XBH4_XTDC_022_713_TimestampNS.size() > 0 ? true : false, 
+                           XBH4_XTDC_022_716_TimestampNS.size() > 0 ? true : false, C2IsHighPressure, refMomentum)=="P"){
+        validChannel = validChannel_Maxi; 
+        validTOF     = maxi;    
+        PID          = "P"; 
+      }
+    }
+    else if(maxi-mini < 10){
+      validChannel = validChannel_Mini;
+      validTOF     = mini;
+      PID          = getPID(mini, XBH4_XTDC_022_713_TimestampNS.size() > 0 ? true : false, 
+                                  XBH4_XTDC_022_716_TimestampNS.size() > 0 ? true : false, C2IsHighPressure, refMomentum);
+    }
+  }
+
+  return;
+}
+
+
 void dumpToEventTree(std::map<std::pair<unsigned long long,unsigned long long>, Spill> &map_Spills, std::string const &s_TimeInfo, std::string const &s_OutDir)
 {
   TFile *f_Out = new TFile((TString)s_OutDir+"EventTree_"+(TString)s_TimeInfo+".root", "RECREATE");
@@ -368,6 +511,7 @@ void dumpToEventTree(std::map<std::pair<unsigned long long,unsigned long long>, 
   unsigned int eventRank;
   unsigned long long spillTimeStamp; //UTC UNIX TIMESTAMP OF FIRST GENERAL TRIGGER IN THE SPILL THE EVENT IS ASSOCIATED WITH. UNIQUE SPILL IDENTIFIER.
   double fractionComplete;
+  double referenceMomentum;
   double XBH4BEND022692I_MEAS;	
   double XBH4BEND022699I_MEAS;	
   double XBH4EXPTNP04001COUNTS;
@@ -437,9 +581,14 @@ void dumpToEventTree(std::map<std::pair<unsigned long long,unsigned long long>, 
   std::vector<std::vector<double>> deflectionAngle;
   std::vector<std::vector<double>> reconstructedMomentum;
 
+  double      validTOF;
+  std::string validChannel;
+  std::string PID;
+
   t_Out->Branch("eventRank",                       &eventRank,                   "eventRank/I"                      );
   t_Out->Branch("spillTimeStamp",                  &spillTimeStamp,              "spillTimeStamp/l"                 );
   t_Out->Branch("fractionComplete",                &fractionComplete,            "fractionComplete/D"               ); 
+  t_Out->Branch("referenceMomentum",               &referenceMomentum,           "referenceMomentum/D"              );
   t_Out->Branch("XBH4.BEND.022.692_I_MEAS",        &XBH4BEND022692I_MEAS,        "XBH4.BEND.022.692_I_MEAS/D"       );	
   t_Out->Branch("XBH4.BEND.022.699_I_MEAS",        &XBH4BEND022699I_MEAS,        "XBH4.BEND.022.699_I_MEAS/D"       );	
   t_Out->Branch("XBH4.EXPT.NP04.001_COUNTS",       &XBH4EXPTNP04001COUNTS,       "XBH4.EXPT.NP04.001_COUNTS/D"      );
@@ -526,6 +675,10 @@ void dumpToEventTree(std::map<std::pair<unsigned long long,unsigned long long>, 
   t_Out->Branch("deflectionAngle",       &deflectionAngle      );
   t_Out->Branch("reconstructedMomentum", &reconstructedMomentum);
 
+  t_Out->Branch("validTOF",        &validTOF, "validTOF/D");
+  t_Out->Branch("validTOFChannel", &validChannel          );
+  t_Out->Branch("PID",             &PID                   );
+
   for(auto it : map_Spills)
   {
     std::map<std::string,BasicDoubleVar>  mapBasicDoubleVars = it.second.getMapBasicDoubleVars();
@@ -579,6 +732,7 @@ void dumpToEventTree(std::map<std::pair<unsigned long long,unsigned long long>, 
 
       spillTimeStamp              = it.first.first;     
       fractionComplete            = it.second.getFractionComplete();
+      referenceMomentum           = it.second.getReferenceMomemtum();
       XBH4BEND022692I_MEAS        = mapBasicDoubleVars["XBH4.BEND.022.692:I_MEAS"       ].fVar;	
       XBH4BEND022699I_MEAS        = mapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"       ].fVar;	
       XBH4EXPTNP04001COUNTS       = mapBasicDoubleVars["XBH4.EXPT.NP04.001:COUNTS"      ].fVar;
@@ -704,8 +858,29 @@ void dumpToEventTree(std::map<std::pair<unsigned long long,unsigned long long>, 
       }
 
       eventRank = rankEvent(XBH4XBPF022697_NFibresHit, XBH4XBPF022701_NFibresHit, XBH4XBPF022702_NFibresHit, 
-                            XBH4XBPF022697_Span,       XBH4XBPF022701_Span,       XBH4XBPF022702_Span,      
-                            mapGenTrigEventToTOFs[i].size(), XBH4XTDC022713_TimestampNS.size(), XBH4XTDC022716_TimestampNS.size());
+          XBH4XBPF022697_Span,       XBH4XBPF022701_Span,       XBH4XBPF022702_Span,      
+          mapGenTrigEventToTOFs[i].size(), XBH4XTDC022713_TimestampNS.size(), XBH4XTDC022716_TimestampNS.size());
+
+      //DO PID FOR NON-DEGENERATE TIME OF FLIGHTS.
+      if(mapGenTrigEventToTOFs[i].size()==1 && XBH4XTDC022713_TimestampNS.size()<2 && XBH4XTDC022716_TimestampNS.size()<2)
+      {
+        validTOF     = tof.at(0); 
+        validChannel = tofChannel.at(0);
+        PID          = getPID(validTOF, XBH4XTDC022713_On, XBH4XTDC022716_On, (XBH4XCET022716PRESSURE >= XBH4XCET022713PRESSURE ? true : false), 
+                              referenceMomentum);
+      }
+      //TO SELECT A VALID TOF AND DO A PID ANALYSIS, NEED TO HAVE NON-DEGENERATE XCET SIGNALS.
+      else if(XBH4XTDC022713_TimestampNS.size()<2 && XBH4XTDC022716_TimestampNS.size()<2)
+      {
+        assignValidTOFAndPID(validTOF, validChannel, PID, tof, tofChannel, XBH4XTDC022713_TimestampNS, XBH4XTDC022716_TimestampNS, referenceMomentum, 
+                            (XBH4XCET022716PRESSURE >= XBH4XCET022713PRESSURE ? true : false));
+      }
+      else
+      {
+        validTOF     = -99.;
+        validChannel = "nouniquietof";
+        PID          = "nopid";
+      }
 
       t_Out->Fill();
     }

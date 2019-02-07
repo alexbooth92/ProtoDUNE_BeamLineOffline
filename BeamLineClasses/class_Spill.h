@@ -88,6 +88,7 @@ class Spill{
     unsigned long long fTimeS;	
     unsigned long long fTimeNS;	
     double fFullTimestampNS;
+    double fReferenceMomentum;
 
     Spill();
     Spill(unsigned long long cTimeS, unsigned long long cTimeNS);
@@ -95,6 +96,9 @@ class Spill{
     bool   areXBPFConsistent(){return fConsistentXBPF;};
     double getFractionComplete();
     double getSpillVar(std::string const &s_BranchTitle);
+    double getReferenceMomemtum();
+    static double getTOFChannelOffset(std::string const &cTOFChannel);
+    double calibrateTOF(double const &cTof, std::string const &cTofChannel);
     void   addIfBetterMatch(BasicDoubleVar const &basicDoubleVar);
     void   addIfBetterMatch(std::vector<VecBoolVar> const &vec_VecBoolVar);
     void   addIfBetterMatch(std::string const &s_Hardware, VecLongVar const &vec_Frac, VecLongVar const &vec_Coarse, VecLongVar const &vec_Seconds, VecLongVar const &vec_TimestampCount);

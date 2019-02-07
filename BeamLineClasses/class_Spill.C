@@ -81,6 +81,50 @@ double Spill::getSpillVar(std::string const &s_BranchTitle)
   return fMapBasicDoubleVars[s_BranchTitle].fVar;
 }
 
+double Spill::getReferenceMomemtum()
+{
+  double epsillon = 4.;
+  if     (std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-20.6 )<epsillon){fReferenceMomentum = 0.3;}
+  else if(std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-34.4 )<epsillon){fReferenceMomentum = 0.5;}
+  else if(std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-68.8 )<epsillon){fReferenceMomentum = 1.;  }
+  else if(std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-137.5)<epsillon){fReferenceMomentum = 2.;  }
+  else if(std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-206.2)<epsillon){fReferenceMomentum = 3.;  }
+  else if(std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-419.7)<epsillon){fReferenceMomentum = 6.;  }
+  else if(std::abs(fMapBasicDoubleVars["XBH4.BEND.022.699:I_MEAS"].fVar-508.3)<epsillon){fReferenceMomentum = 7.;  }
+  else
+  {
+    fReferenceMomentum = 99.; 
+  }
+  return fReferenceMomentum;
+}
+
+
+double Spill::getTOFChannelOffset(std::string const &cTOFChannel)
+{
+  double CORRAA = 155.479 - 95.3159402; double CORRAB = 155.064 - 95.3159402;
+  double CORRBA = 155.359 - 95.3159402; double CORRBB = 154.970 - 95.3159402;
+
+  if     (cTOFChannel=="AA"){return CORRAA;}
+  else if(cTOFChannel=="AB"){return CORRAB;}
+  else if(cTOFChannel=="BA"){return CORRBA;}
+  else if(cTOFChannel=="BB"){return CORRBB;}
+  else                      {return 0;     }
+}
+
+
+double Spill::calibrateTOF(double const &tof, std::string const &tofChannel)
+{
+  double tofCalib = tof;
+
+  if     (tofChannel=="AA"){tofCalib = tof - Spill::getTOFChannelOffset("AA");}
+  else if(tofChannel=="AB"){tofCalib = tof - Spill::getTOFChannelOffset("AB");}
+  else if(tofChannel=="BA"){tofCalib = tof - Spill::getTOFChannelOffset("BA");}
+  else if(tofChannel=="BB"){tofCalib = tof - Spill::getTOFChannelOffset("BB");}
+
+  return tofCalib;
+}
+
+
 void Spill::addIfBetterMatch(BasicDoubleVar const &basicDoubleVar)
 {
   if(fMapBasicDoubleVars.count(basicDoubleVar.fBranchTitle))
@@ -365,7 +409,7 @@ void Spill::constructTimeOfFlight()
           double tof = deltaSeconds*1e9 + deltaSubSeconds;
           if(tof>0)
           {
-            vec_TOF.push_back({"AA", tof}); 
+            vec_TOF.push_back({"AA", calibrateTOF(tof, "AA")}); 
           }
         }
       }
@@ -383,7 +427,7 @@ void Spill::constructTimeOfFlight()
           double tof = deltaSeconds*1e9 + deltaSubSeconds;
           if(tof>0)
           {
-            vec_TOF.push_back({"AB", tof}); 
+            vec_TOF.push_back({"AB", calibrateTOF(tof, "AB")}); 
           }
         }
       }
@@ -401,7 +445,7 @@ void Spill::constructTimeOfFlight()
           double tof = deltaSeconds*1e9 + deltaSubSeconds;
           if(tof>0)
           {
-            vec_TOF.push_back({"BA", tof}); 
+            vec_TOF.push_back({"BA", calibrateTOF(tof, "BA")}); 
           }
         }
       }
@@ -419,7 +463,7 @@ void Spill::constructTimeOfFlight()
           double tof = deltaSeconds*1e9 + deltaSubSeconds;
           if(tof>0)
           {
-            vec_TOF.push_back({"BB", tof}); 
+            vec_TOF.push_back({"BB", calibrateTOF(tof, "BB")}); 
           }
         }
       }
